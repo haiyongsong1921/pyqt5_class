@@ -19,7 +19,7 @@ class MyTextControlLearn(QMainWindow, Ui_MainWindow):
 
     def init_listWidget(self):
         from collections import OrderedDict
-        order_dict = OrderedDict({'第一名': '2021年剧情喜剧《腿》',
+        order_dict = OrderedDict({'/c第一名': '?c2021年剧情喜剧《腿》',
                                   '第二名': '2021年科幻动作《永恒族/永恒神族',
                                   '第三名': '2021年喜剧悬疑《不速来客》',
                                   '第四名': '2021年喜剧《亚当斯一家2》',
