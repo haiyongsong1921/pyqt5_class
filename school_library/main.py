@@ -37,10 +37,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def init_database(self, connection):
         #1. create user table
         cursor = connection.cursor()
-        sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,username varchar(20) UNIQUE,password varchar(20),studentid varchar(20),name varchar(20)" \
+        sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,username varchar(20) UNIQUE," \
+              "password varchar(20),studentid varchar(20),name varchar(20)" \
               ",admin INTEGER, PRIMARY KEY(id AUTOINCREMENT))".format(self.user_info_table)
         cursor.execute(sql)
-        sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,studentid varchar(20),bookindex TEXT,bookname TEXT,borrowtime datetime default current_timestamp" \
+        sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,studentid varchar(20)," \
+              "bookindex TEXT,bookname TEXT,borrowtime datetime default current_timestamp" \
               ",returntime datetime default current_timestamp, PRIMARY KEY(id AUTOINCREMENT))".format(self.borrow_record_table)
         cursor.execute(sql)
         #2. create borrow_record table
@@ -52,9 +54,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.__init_Main_Tab()
         self.__init_Search_Tab()
         self.__init_Return_Tab()
-        #用户管理页背景图
-        self.lb_user_bk.setScaledContents(True)
-        self.lb_user_bk.setPixmap(QtGui.QPixmap("./img/user_man.png"))
+        self.__init_User_Manage_Tab()
+
 
 
     def __init_Main_Tab(self):
@@ -81,6 +82,11 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lb_book_return_bk.setPixmap(QtGui.QPixmap("./img/return_bk.jpeg"))
         # 主页登录按钮
         self.pb_return_search.clicked.connect(self.return_book)
+
+    def __init_User_Manage_Tab(self):
+        # 用户管理页背景图
+        self.lb_user_bk.setScaledContents(True)
+        self.lb_user_bk.setPixmap(QtGui.QPixmap("./img/user_man.png"))
 
     def return_book(self):
         bookNo = self.le_return_bookid.text()
@@ -120,9 +126,22 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         password = password[2:password_length-1] #加密后格式为b'加密字符'， 要去掉b和首尾的'
 
         studentid = registerDialog.studentid
+
         realname = registerDialog.realname
+        if (not username) or (not studentid) or (not realname):
+            QMessageBox.information(self, "提示",
+                                    "用户名,学号和真实姓名不能为空", QMessageBox.Ok)
+            return
         user = UserInfo(username, password, realname, studentid)
-        self.__register_to_database(user)
+        try:
+            self.__register_to_database(user)
+        except Exception:
+            QMessageBox.information(self, "提示",
+                                    "注册失败！请重新注册", QMessageBox.Ok)
+        else:
+            QMessageBox.information(self, "提示",
+                                    "注册成功！", QMessageBox.Ok)
+
 
 
         '''
