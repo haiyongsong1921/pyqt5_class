@@ -16,6 +16,26 @@ class UserInfo:
         self.realname = realname
         self.admin = False
 
+class BookAdditionInfo:
+    def __init__(self):
+        self.isbn = ""
+        self.price = ""
+        self.language = ""
+        self.pages = ""
+        self.overview = ""
+
+class BookInfo:
+    def __init__(self, name, author, publisher, publish_date, search_index):
+        self.name = name
+        self.writer = author
+        self.publisher = publisher
+        self.publish_date = publish_date
+        self.search_index = search_index
+        self.addtionalInfo = BookAdditionInfo()
+
+    def __str__(self):
+        return self. name + "," + self.writer+"," + self.publisher+"," + self.publish_date+"," + self.search_index
+
 def creatSQLiteDataBase(dbName):
     connection = sqlite3.connect(dbName)
     return connection
@@ -43,7 +63,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         cursor.execute(sql)
         sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,studentid varchar(20)," \
               "bookindex TEXT,bookname TEXT,borrowtime datetime default current_timestamp" \
-              ",returntime datetime default current_timestamp, PRIMARY KEY(id AUTOINCREMENT))".format(self.borrow_record_table)
+              ",returntime datetime default current_timestamp,bookstatus INTEGER default 0, PRIMARY KEY(id AUTOINCREMENT))".format(self.borrow_record_table)
         cursor.execute(sql)
         #2. create borrow_record table
 
@@ -69,12 +89,17 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def __init_Search_Tab(self):
         # 图书搜索页背景图
         self.lb_search_bk.setScaledContents(True)
-        self.lb_search_bk.setPixmap(QtGui.QPixmap("./img/search.jpeg"))
-        # 主页登录按钮
+        self.lb_search_bk.setPixmap(QtGui.QPixmap("./img/search_book.jpeg"))
+        # 查询按钮
         self.pb_search.clicked.connect(self.search_book)
         # 添加数据到查询方式comboBox
-        search_options = ["按照书名查找", "按照作者查找", "按照书号查找", "按照出版年份查找"]
+        search_options = ["按照书名查找", "按照作者查找", "按照书号查找"]
         self.cb_search_option.addItems(search_options)
+        # 设置结果表头
+        headers = ["序号", "书名", "作者", "出版商", "发行日期", "图书编号", "页码", "图书状态"]
+        self.tw_search_result.setHorizontalHeaderLabels(headers)
+        self.tw_search_result.setColumnCount(8)
+
 
     def __init_Return_Tab(self):
         # 图书搜索页背景图
@@ -95,7 +120,57 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     def search_book(self):
         search_keywords = self.le_search_keyword.text()
-        pass
+        filter_index = self.cb_search_option.currentIndex()
+        if filter_index==0:
+            filter_key = "name"
+        elif filter_index==1:
+            filter_key = "writer"
+        elif filter_index==2:
+            filter_key = "search_index"
+
+        sql = '''select name,writer,publisher,publish_date,search_index,pages from book_info 
+        where {0} like "%{1}%"'''.format(filter_key, search_keywords)
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        if len(result)>0:
+            self.fill_data_tableWidget(result)
+
+    def fill_data_tableWidget(self, result):
+        rowCount = len(result)
+        colCount = len(result[0])
+        self.tw_search_result.setRowCount(rowCount)
+        for row in range(rowCount):
+            contentId = str(row+1)
+            tw_item = QTableWidgetItem(contentId)
+            tw_item.setTextAlignment(Qt.AlignCenter)
+            self.tw_search_result.setItem(row, 0, tw_item)
+            if self.__is_book_in_library(result[row][4]):
+                contentStatus = "在馆"
+            else:
+                contentStatus = "借出"
+            tw_item = QTableWidgetItem(contentStatus)
+            self.tw_search_result.setItem(row, 7, tw_item)
+            for col in range(colCount):
+                content = str(result[row][col])
+                tw_item = QTableWidgetItem(content)
+                self.tw_search_result.setItem(row, col+1, tw_item)
+        self.tw_search_result.resizeColumnsToContents()
+        self.tw_search_result.setAlternatingRowColors(True)
+
+    def __is_book_in_library(self, book_index):
+        sql = '''select bookstatus from borrow_record where bookindex="{0}"'''.format(book_index)
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        if not result:
+            return True
+        elif result[0]>0:
+            return True
+        else:
+            return False
+
+
 
     def login(self):
         userName = self.le_user.text()
