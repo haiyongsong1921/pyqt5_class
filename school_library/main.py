@@ -1,4 +1,6 @@
 import sys
+from datetime import datetime, timedelta, date
+
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -63,20 +65,25 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         cursor.execute(sql)
         sql = "CREATE TABLE IF NOT EXISTS {0} (id INTEGER NOT NULL UNIQUE,studentid varchar(20)," \
               "bookindex TEXT,bookname TEXT,borrowtime datetime default current_timestamp" \
-              ",returntime datetime default current_timestamp,bookstatus INTEGER default 0, PRIMARY KEY(id AUTOINCREMENT))".format(self.borrow_record_table)
+              ",returntime datetime default current_timestamp,bookstatus INTEGER default 0" \
+              ", PRIMARY KEY(id AUTOINCREMENT))".format(self.borrow_record_table)
         cursor.execute(sql)
         #2. create borrow_record table
 
         return cursor
 
+    def __enable_tabs(self, visable):
+        self.tabWidget.setTabVisible(1, visable)
+        self.tabWidget.setTabVisible(2, visable)
+        self.tabWidget.setTabVisible(3, visable)
 
     def init_Tabs(self):
         self.__init_Main_Tab()
         self.__init_Search_Tab()
         self.__init_Return_Tab()
         self.__init_User_Manage_Tab()
-
-
+        #启动程序时，只显示登录界面，登录成功后，才可访问其它功能
+        self.__enable_tabs(False)
 
     def __init_Main_Tab(self):
         # 主页背景图
@@ -100,23 +107,89 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.tw_search_result.setHorizontalHeaderLabels(headers)
         self.tw_search_result.setColumnCount(8)
 
-
     def __init_Return_Tab(self):
         # 图书搜索页背景图
         self.lb_book_return_bk.setScaledContents(True)
         self.lb_book_return_bk.setPixmap(QtGui.QPixmap("./img/return_bk.jpeg"))
-        # 主页登录按钮
-        self.pb_return_search.clicked.connect(self.return_book)
+        # 按钮
+        self.pb_return_search.clicked.connect(self.return_search)
+        self.pb_return_b.clicked.connect(self.borrow_book)
+        self.pb_return_r.clicked.connect(self.return_book)
+        # 初始状态，隐藏标签
+        self.label_bookname.hide()
+        self.label_author.hide()
+        self.label_status.hide()
 
     def __init_User_Manage_Tab(self):
         # 用户管理页背景图
         self.lb_user_bk.setScaledContents(True)
         self.lb_user_bk.setPixmap(QtGui.QPixmap("./img/user_man.png"))
 
+    def return_search(self):
+        bookNo = self.le_return_bookid.text()
+        if len(bookNo)>0:
+            sql = '''select name,writer from book_info where search_index="{0}"'''.format(bookNo)
+            cursor = self.connection.cursor()
+            cursor.execute(sql)
+            result = cursor.fetchone()
+            if not result:
+                self.label_bookname.setText("未找到")
+                self.label_author.setText("无")
+                self.label_status.setText("无")
+            else:
+                self.label_bookname.setText(result[0])
+                self.label_author.setText(result[1])
+                self.searchedBook = result[0]
+                if self.__is_book_in_library(bookNo):
+                    contentStatus = "在馆"
+                else:
+                    contentStatus = "借出"
+                self.label_status.setText(contentStatus)
+                self.label_bookname.show()
+                self.label_author.show()
+                self.label_status.show()
+        else:
+            QMessageBox.information(self, "提示",
+                                    "请输入书号", QMessageBox.Ok)
+    def borrow_book(self):
+        bookNo = self.le_return_bookid.text()
+        if len(bookNo)>0:
+            sql = '''select bookname from borrow_record where bookindex="{0}"'''.format(bookNo)
+            cursor = self.connection.cursor()
+            cursor.execute(sql)
+            result = cursor.fetchone()
+            if not result: #没有记录，表示之前没有过借出的记录，此时增加一条借阅记录到borrow_record表中
+                sql = '''insert into borrow_record values(NULL,?,?,?,?,?,?)'''
+                tupleValue = (self.currentUser,bookNo,self.searchedBook, datetime.now(),
+                              datetime.now() + timedelta(days=14), 1)
+            else:#有记录，之前被借过,怎更新标志位为1，表示被借出
+                sql = '''update borrow_record set bookstatus=1 where bookindex=?'''
+                tupleValue =(bookNo,)
+
+            cursor.execute(sql,tupleValue)
+            self.connection.commit()
+            self.label_status.setText("借出")
+            cursor.close()
+            return_date = datetime.today()+timedelta(days=14)
+            str_return_date = return_date.strftime("%Y-%m-%d")
+
+            QMessageBox.information(self, "提示",
+                                    "请于" + str_return_date + "之前归还本书!", QMessageBox.Ok)
+        else:
+            QMessageBox.information(self, "提示",
+                                    "请输入书号", QMessageBox.Ok)
+
     def return_book(self):
         bookNo = self.le_return_bookid.text()
-        pass
-
+        sql = '''update borrow_record set bookstatus=0 where bookindex=?'''
+        tupleValue = (bookNo,)
+        cursor = self.connection.cursor()
+        cursor.execute(sql, tupleValue)
+        self.connection.commit()
+        self.label_status.setText("在馆")
+        cursor.close()
+        QMessageBox.information(self, "提示",
+                                    "图书归还成功！", QMessageBox.Ok)
 
     def search_book(self):
         search_keywords = self.le_search_keyword.text()
@@ -163,14 +236,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         cursor = self.connection.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()
-        if not result:
+        if not result:  #没有该书记录，则说明该书没有被借出过，在馆
             return True
-        elif result[0]>0:
-            return True
-        else:
+        elif result[0]>0: #有记录，且状态>0， 表示借出
             return False
-
-
+        else:
+            return True # bookstatus==0， 表示在馆
 
     def login(self):
         userName = self.le_user.text()
@@ -186,6 +257,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.lb_main_pwd.hide()
             self.label_main_slogon.setStyleSheet("color:rgb(0, 255, 0)")
             self.label_main_slogon.setText("登录成功")
+            self.__enable_tabs(True)
+
         else:
             QMessageBox.information(self, "提示",
                                     "用户名或密码错误，请重新输入", QMessageBox.Ok)
@@ -260,12 +333,13 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     def __login_success(self, user, pwd):
         cursor = self.connection.cursor()
-        sql = "select password from user_info where username='{0}'".format(user)
+        sql = "select password,studentid from user_info where username='{0}'".format(user)
         cursor.execute(sql)
         result = cursor.fetchall()
-        pwd_db = result[0]
+        pwd_db = result[0][0]
         pwd_decode = base64.b64decode(str(pwd_db)).decode("utf-8")
         if pwd_decode == pwd:
+            self.currentUser = result[0][1]
             return True
         else:
             return False
