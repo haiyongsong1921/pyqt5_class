@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 from Form.MainWindow import Ui_MainWindow
 import sqlite3
 import base64
-from RegisterDialogWrapper import RegisterWindow
+from RegisterDialogWrapper import RegisterWindow, ChangePwdWindow
 
 class UserInfo:
     def __init__(self, username, password, realname, studentid):
@@ -124,6 +124,35 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         # 用户管理页背景图
         self.lb_user_bk.setScaledContents(True)
         self.lb_user_bk.setPixmap(QtGui.QPixmap("./img/user_man.png"))
+        self.pb_change_info.clicked.connect(self.change_pwd)
+        self.pb_logout.clicked.connect(self.logout)
+        self.pb_history.clicked.connect(self.borrow_history)
+
+    def change_pwd(self):
+        changePwdDialog = ChangePwdWindow(self.currentUser_pwd)
+        changePwdDialog.exec()#弹出密码修改对话框
+        if changePwdDialog.new_password:
+            new_pwd = changePwdDialog.new_password
+            sql = '''update user_info set password=? where studentid=?'''
+            tuple_value = (new_pwd, self.currentUser)
+            cursor = self.connection.cursor()
+            cursor.execute(sql, tuple_value)
+            self.connection.commit()
+            cursor.close()
+            QMessageBox.information(self, "提示",
+                                    "密码修改成功", QMessageBox.Ok)
+
+    def borrow_history(self):
+        pass
+
+    def logout(self):
+        self.__enable_tabs(False)
+        self.le_user.show()
+        self.le_pwd.show()
+        self.lb_main_user.show()
+        self.lb_main_pwd.show()
+        self.label_main_slogon.setText("")
+
 
     def return_search(self):
         bookNo = self.le_return_bookid.text()
@@ -251,6 +280,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                     "用户名不能为空", QMessageBox.Ok)
             return
         if self.__login_success(userName, pwd):
+            self.currentUser_pwd = pwd
             self.le_user.hide()
             self.le_pwd.hide()
             self.lb_main_user.hide()

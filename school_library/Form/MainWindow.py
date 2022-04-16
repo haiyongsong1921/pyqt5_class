@@ -276,7 +276,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(3)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -306,7 +306,7 @@ class Ui_MainWindow(object):
         self.label_status.setText(_translate("MainWindow", "TextLabel"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", "图书借还"))
         self.lb_return_title_2.setText(_translate("MainWindow", "账户管理"))
-        self.pb_change_info.setText(_translate("MainWindow", "修改信息"))
+        self.pb_change_info.setText(_translate("MainWindow", "修改密码"))
         self.pb_history.setText(_translate("MainWindow", "借阅记录"))
         self.pb_logout.setText(_translate("MainWindow", "退出登录"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("MainWindow", "用户管理"))

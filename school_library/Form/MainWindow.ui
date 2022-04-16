@@ -30,7 +30,7 @@
      <enum>QTabWidget::Rounded</enum>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>3</number>
     </property>
     <property name="elideMode">
      <enum>Qt::ElideRight</enum>
@@ -614,7 +614,7 @@
        </font>
       </property>
       <property name="text">
-       <string>修改信息</string>
+       <string>修改密码</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_history">
