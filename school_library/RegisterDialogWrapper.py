@@ -2,11 +2,11 @@ import sys
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui, QtWidgets
-from Form.MainWindow import Ui_MainWindow
-import sqlite3
+from PyQt5.QtCore import Qt
 import base64
 from Form.ChangePwdDialog import Ui_Change_pwd_dialog
 from Form.RegisterDialog import Ui_RegisterDialog
+from Form.borrow_history import Ui_Borrow_history
 
 class RegisterWindow(QDialog, Ui_RegisterDialog):
     def __init__(self, parent=None):
@@ -62,3 +62,23 @@ class ChangePwdWindow(QDialog, Ui_Change_pwd_dialog):
 
     def Click_Cancel(self):
         self.hide()
+
+class BorrowHistoyDialog(QDialog, Ui_Borrow_history):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        # 设置结果表头
+        headers = ["书名", "编号", "借阅日期", "归还日期"]
+        self.tableWidget_history.setHorizontalHeaderLabels(headers)
+        self.tableWidget_history.setColumnCount(4)
+
+    def fill_data_to_tableWidget(self, borrowInfos):
+        rowCount = len(borrowInfos)
+        self.tableWidget_history.setRowCount(rowCount)
+        for r in range(rowCount):
+            for c in range(4):
+                content = str(borrowInfos[r][c])
+                tw_item = QTableWidgetItem(content)
+                self.tableWidget_history.setItem(r, c, tw_item)
+        self.tableWidget_history.resizeColumnsToContents()
+        self.tableWidget_history.setAlternatingRowColors(True)

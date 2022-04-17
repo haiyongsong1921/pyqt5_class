@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 from Form.MainWindow import Ui_MainWindow
 import sqlite3
 import base64
-from RegisterDialogWrapper import RegisterWindow, ChangePwdWindow
+from RegisterDialogWrapper import RegisterWindow, ChangePwdWindow, BorrowHistoyDialog
 
 class UserInfo:
     def __init__(self, username, password, realname, studentid):
@@ -143,7 +143,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                     "密码修改成功", QMessageBox.Ok)
 
     def borrow_history(self):
-        pass
+        sql = '''select bookname,bookindex,borrowtime,returntime from borrow_record where studentid=?'''
+        tuple_value = (self.currentUser,)
+        cursor = self.connection.cursor()
+        cursor.execute(sql, tuple_value)
+        result = cursor.fetchall()
+        borrowDialog = BorrowHistoyDialog(self)
+        borrowDialog.fill_data_to_tableWidget(result)
+        borrowDialog.exec()
 
     def logout(self):
         self.__enable_tabs(False)
@@ -235,7 +242,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         cursor = self.connection.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
-        if len(result)>0:
+        if len(result) > 0:
             self.fill_data_tableWidget(result)
 
     def fill_data_tableWidget(self, result):
